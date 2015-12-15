@@ -7,10 +7,12 @@ License:     ISC
 Plugins:     META (0.4), DevFiles (0.4)
 BuildTools:  ocamlbuild
 
-Library "mirage-net-xen"
-  CompiledObject:     best
+Library mirage_net_solo5
+  CompiledObject:     native
   Path:               lib
-  Findlibname:        mirage-net-xen
+  Findlibname:        mirage-net-solo5
   Modules:            Netif
   BuildDepends:       lwt.syntax, cstruct, cstruct.syntax, ipaddr, mirage-xen, xen-evtchn, xen-gnt, mirage-profile
+  CSources:           solo5_stubs.c
+  CCOpt:              -ffreestanding -mcmodel=large -mno-red-zone -mno-3dnow -std=gnu99 -O0 -Wall -Wextra -Werror -g -fno-PIC -I/root/solo5/kernel
   XMETARequires:      lwt, cstruct, ipaddr, mirage-xen, xen-evtchn, xen-gnt, mirage-profile

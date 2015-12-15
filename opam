@@ -1,11 +1,11 @@
 opam-version: "1.2"
 maintainer:    "anil@recoil.org"
-homepage:      "https://github.com/mirage/mirage-net-xen"
-bug-reports:   "https://github.com/mirage/mirage-net-xen/issues"
-dev-repo:      "https://github.com/mirage/mirage-net-xen.git"
+homepage:      "https://github.com/djwillia/mirage-net-xen"
+bug-reports:   "https://github.com/djwillia/mirage-net-xen/issues"
+dev-repo:      "https://github.com/djwillia/mirage-net-xen.git"
 build: [ [make] ]
 install: [ [make "install"] ]
-remove: ["ocamlfind" "remove" "mirage-net-xen"]
+remove: ["ocamlfind" "remove" "mirage-net-solo5"]
 depends: [
   "ocamlfind"
   "cstruct" {>= "1.0.1"}

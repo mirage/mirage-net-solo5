@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 6e92915623607c0fa2f71740aee41e72) *)
+(* DO NOT EDIT (digest: 8207ffb96de77ed7f2559c82847a5d2d) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -607,9 +607,42 @@ end
 open Ocamlbuild_plugin;;
 let package_default =
   {
-     MyOCamlbuildBase.lib_ocaml = [("mirage-net-xen", ["lib"], [])];
-     lib_c = [];
-     flags = [];
+     MyOCamlbuildBase.lib_ocaml = [("mirage_net_solo5", ["lib"], [])];
+     lib_c = [("mirage_net_solo5", "lib", [])];
+     flags =
+       [
+          (["oasis_library_mirage_net_solo5_ccopt"; "compile"],
+            [
+               (OASISExpr.EBool true,
+                 S
+                   [
+                      A "-ccopt";
+                      A "-ffreestanding";
+                      A "-ccopt";
+                      A "-mcmodel=large";
+                      A "-ccopt";
+                      A "-mno-red-zone";
+                      A "-ccopt";
+                      A "-mno-3dnow";
+                      A "-ccopt";
+                      A "-std=gnu99";
+                      A "-ccopt";
+                      A "-O0";
+                      A "-ccopt";
+                      A "-Wall";
+                      A "-ccopt";
+                      A "-Wextra";
+                      A "-ccopt";
+                      A "-Werror";
+                      A "-ccopt";
+                      A "-g";
+                      A "-ccopt";
+                      A "-fno-PIC";
+                      A "-ccopt";
+                      A "-I/root/solo5/kernel"
+                   ])
+            ])
+       ];
      includes = []
   }
   ;;
@@ -618,6 +651,6 @@ let conf = {MyOCamlbuildFindlib.no_automatic_syntax = false}
 
 let dispatch_default = MyOCamlbuildBase.dispatch_default conf package_default;;
 
-# 622 "myocamlbuild.ml"
+# 655 "myocamlbuild.ml"
 (* OASIS_STOP *)
 Ocamlbuild_plugin.dispatch dispatch_default;;

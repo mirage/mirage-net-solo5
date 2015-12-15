@@ -8,3 +8,6 @@ configure.cmi
 configure.cmx
 configure.o
 .*.swp
+lib/*.clib
+lib/*.mldylib
+lib/*.mllib
