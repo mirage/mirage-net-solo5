@@ -48,7 +48,6 @@ CAMLprim value stub_net_read(value buffer, value num) {
     uint8_t *pkt;
 
     assert(Caml_ba_array_val(buffer)->num_dims == 1);
-    assert(Caml_ba_array_val(buffer)->flags & CAML_BA_UINT8);
     
 
     pkt = virtio_net_pkt_get(&len);
@@ -88,7 +87,6 @@ CAMLprim value stub_net_write(value buffer, value num) {
     int ret;
 
     assert(Caml_ba_array_val(buffer)->num_dims == 1);
-    assert(Caml_ba_array_val(buffer)->flags & CAML_BA_UINT8);
     
     //printf("%s: sending network pkt\n", __FILE__);
     ret = virtio_net_xmit_packet(data, n) ? -1 : n;
