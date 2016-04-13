@@ -43,7 +43,6 @@ type t = {
   stats : stats;
 }
 
-external solo5_dbg: string -> unit = "stub_net_dbg"
 external solo5_net_mac: unit -> string = "stub_net_mac"
 external solo5_net_read: Cstruct.buffer -> int -> int = "stub_net_read"
 external solo5_net_write: Cstruct.buffer -> int -> int = "stub_net_write"
@@ -70,7 +69,6 @@ let err_partial_write len' page =
 
 
 let connect devname =
-  solo5_dbg "connect!!\n";
   match Macaddr.of_string (solo5_net_mac ()) with
   | None -> err_unknown "mac issue"
   | Some m -> 
