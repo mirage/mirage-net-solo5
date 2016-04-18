@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: c5afe308cfdebe847ce61df9e391f873)
+# DO NOT EDIT (digest: a3128ac9978f953c1283728262d0e545)
 version = "1.4.1"
 description = "Xen network frontend driver implementation"
 requires =
@@ -8,6 +8,6 @@ archive(byte) = "mirage_net_solo5.cma"
 archive(byte, plugin) = "mirage_net_solo5.cma"
 archive(native) = "mirage_net_solo5.cmxa"
 archive(native, plugin) = "mirage_net_solo5.cmxs"
-exists_if = "mirage_net_solo5.cmxa"
+exists_if = "mirage_net_solo5.cma"
 # OASIS_STOP
 
