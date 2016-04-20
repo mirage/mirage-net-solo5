@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 864fecbb5b9c446028f10cd23cafcd56)
+# DO NOT EDIT (digest: 537b789e568f493bd83d3dfea6874385)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -16,9 +16,6 @@ true: annot, bin_annot
 "_darcs": not_hygienic
 # Library mirage_net_solo5
 "lib/mirage_net_solo5.cmxs": use_mirage_net_solo5
-<lib/*.ml{,i,y}>: oasis_library_mirage_net_solo5_ccopt
-"lib/solo5_stubs.c": oasis_library_mirage_net_solo5_ccopt
-<lib/mirage_net_solo5.{cma,cmxa}>: use_libmirage_net_solo5_stubs
 <lib/*.ml{,i,y}>: pkg_cstruct
 <lib/*.ml{,i,y}>: pkg_cstruct.syntax
 <lib/*.ml{,i,y}>: pkg_io-page
@@ -27,14 +24,6 @@ true: annot, bin_annot
 <lib/*.ml{,i,y}>: pkg_mirage-profile
 <lib/*.ml{,i,y}>: pkg_mirage-solo5
 <lib/*.ml{,i,y}>: pkg_mirage-types
-"lib/solo5_stubs.c": pkg_cstruct
-"lib/solo5_stubs.c": pkg_cstruct.syntax
-"lib/solo5_stubs.c": pkg_io-page
-"lib/solo5_stubs.c": pkg_ipaddr
-"lib/solo5_stubs.c": pkg_lwt.syntax
-"lib/solo5_stubs.c": pkg_mirage-profile
-"lib/solo5_stubs.c": pkg_mirage-solo5
-"lib/solo5_stubs.c": pkg_mirage-types
 # OASIS_STOP
 true: annot, bin_annot, debug, principal
 true: warn(A-27-32-34-37), strict_sequence
