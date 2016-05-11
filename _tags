@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 537b789e568f493bd83d3dfea6874385)
+# DO NOT EDIT (digest: 0c8675b913e60947e4efee39a79bafb6)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -17,10 +17,8 @@ true: annot, bin_annot
 # Library mirage_net_solo5
 "lib/mirage_net_solo5.cmxs": use_mirage_net_solo5
 <lib/*.ml{,i,y}>: pkg_cstruct
-<lib/*.ml{,i,y}>: pkg_cstruct.syntax
 <lib/*.ml{,i,y}>: pkg_io-page
 <lib/*.ml{,i,y}>: pkg_ipaddr
-<lib/*.ml{,i,y}>: pkg_lwt.syntax
 <lib/*.ml{,i,y}>: pkg_mirage-profile
 <lib/*.ml{,i,y}>: pkg_mirage-solo5
 <lib/*.ml{,i,y}>: pkg_mirage-types
