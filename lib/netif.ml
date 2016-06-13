@@ -118,7 +118,7 @@ let rec read t page =
           Lwt.return `Continue)
   in
   process () >>= function
-  | `EAGAIN -> OS.Time.sleep 0.0 >>= fun () -> read t page
+  | `EAGAIN -> OS.Main.wait_for_work () >>= fun () -> read t page
   | `Error _ | `Continue | `Ok _ as r -> Lwt.return r
 
 let safe_apply f x =
