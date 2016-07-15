@@ -1,8 +1,8 @@
 OASISFormat: 0.4
-Name:        mirage-net-xen
-Version:     1.4.1
-Synopsis:    Xen network frontend driver implementation
-Authors:     Anil Madhavapeddy, David Scott
+Name:        mirage-net-solo5
+Version:     0.1.1
+Synopsis:    Solo5 network driver for Mirage
+Authors:     Anil Madhavapeddy, Dan Williams, Martin Lucina
 License:     ISC
 Plugins:     META (0.4), DevFiles (0.4)
 BuildTools:  ocamlbuild

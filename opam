@@ -1,8 +1,10 @@
 opam-version: "1.2"
-maintainer:    "anil@recoil.org"
-homepage:      "https://github.com/djwillia/mirage-net-xen"
-bug-reports:   "https://github.com/djwillia/mirage-net-xen/issues"
-dev-repo:      "https://github.com/djwillia/mirage-net-xen.git"
+maintainer:    "martin@lucina.net"
+homepage:      "https://github.com/mirage/mirage-net-solo5"
+bug-reports:   "https://github.com/mirage/mirage-net-solo5/issues"
+dev-repo:      "https://github.com/mirage/mirage-net-solo5.git"
+authors:       [ "Anil Madhavapeddy <anil@recoil.org>" "Dan Williams <djwillia@us.ibm.com>" "Martin Lucina <martin@lucina.net>" ]
+license:       "ISC"
 build: [ [make] ]
 install: [ [make "install"] ]
 remove: ["ocamlfind" "remove" "mirage-net-solo5"]
@@ -16,4 +18,4 @@ depends: [
   "mirage-profile" {>="0.3"}
   "mirage-solo5"
 ]
-ocaml-version: [>= "4.01.0"]
+available: [ ocaml-version >= "4.01.0" ]

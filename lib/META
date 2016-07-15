@@ -1,7 +1,7 @@
 # OASIS_START
-# DO NOT EDIT (digest: 618ae22f87b18a736dd741089c36fa56)
-version = "1.4.1"
-description = "Xen network frontend driver implementation"
+# DO NOT EDIT (digest: c73ae86c67e6673cbf5d009bcf95c702)
+version = "0.1.1"
+description = "Solo5 network driver for Mirage"
 requires = "cstruct ipaddr mirage-profile mirage-types io-page mirage-solo5"
 archive(byte) = "mirage_net_solo5.cma"
 archive(byte, plugin) = "mirage_net_solo5.cma"
