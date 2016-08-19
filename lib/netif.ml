@@ -67,7 +67,6 @@ let err_permission_denied devname =
 let err_partial_write len' page =
   fail "tap: partial write (%d, expected %d)" len' page.Cstruct.len
 
-
 let connect devname =
   match Macaddr.of_string (solo5_net_mac ()) with
   | None -> err_unknown "mac issue"
@@ -150,34 +149,23 @@ let rec listen t fn =
     listen t fn
   | false -> Lwt.return_unit
 
-let do_write page =
-  Lwt.return (solo5_net_write page.Cstruct.buffer page.Cstruct.len)
+let do_write b =
+  Lwt.return (solo5_net_write b.Cstruct.buffer b.Cstruct.len)
 
-(* Transmit a packet from an Io_page *)
-let write t page =
+(* Transmit a packet from a Cstruct.t *)
+let write t buffer =
   let open Cstruct in
-  (* Unfortunately we peek inside the cstruct type here: *)
-  (* Lwt_bytes.write t.dev page.buffer page.off page.len  *)
-  do_write page >>= fun len' ->
+  do_write buffer >>= fun len' ->
   t.stats.tx_pkts <- Int32.succ t.stats.tx_pkts;
-  t.stats.tx_bytes <- Int64.add t.stats.tx_bytes (Int64.of_int page.len);
-  if len' <> page.len then err_partial_write len' page
+  t.stats.tx_bytes <- Int64.add t.stats.tx_bytes (Int64.of_int buffer.len);
+  if len' <> buffer.len then err_partial_write len' buffer
   else Lwt.return_unit
 
-(* TODO use writev: but do a copy for now *)
 let writev t = function
   | []     -> Lwt.return_unit
-  | [page] -> write t page
-  | pages  ->
-    let page = Io_page.(to_cstruct (get 1)) in
-    let off = ref 0 in
-    List.iter (fun p ->
-        let len = Cstruct.len p in
-        Cstruct.blit p 0 page !off len;
-        off := !off + len;
-      ) pages;
-    let v = Cstruct.sub page 0 !off in
-    write t v
+  | [buffer] -> write t buffer
+  | buffers  ->
+    write t @@ Cstruct.concat buffers
 
 let mac t = t.mac
 
