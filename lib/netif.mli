@@ -14,7 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-(** Xen Netfront interface for Ethernet I/O. *)
+(** Solo5 interface for Ethernet I/O. *)
 include V1.NETWORK
 with type 'a io = 'a Lwt.t
 and type     page_aligned_buffer = Io_page.t
