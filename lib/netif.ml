@@ -53,25 +53,21 @@ let err e = Lwt.return (`Error e)
 let fail fmt = Printf.ksprintf (fun str -> Lwt.fail (Failure str)) fmt
 let ok x = Lwt.return (`Ok x)
 
-let err_unknown u = err (`Unknown u)
 let err_disconnected () = err `Disconnected
 
 let err_permission_denied devname =
-  let s = Printf.sprintf
-      "Permission denied while opening the %s tun device. \n\
-       Please re-run using sudo, and install the TuntapOSX \n\
-       package if you are on MacOS X." devname
-  in
-  err_unknown s
+  Printf.sprintf
+    "Permission denied while opening the %s tun device. \n\
+     Please re-run using sudo, and install the TuntapOSX \n\
+     package if you are on MacOS X." devname
 
 let err_partial_write len' page =
   fail "tap: partial write (%d, expected %d)" len' page.Cstruct.len
 
 let connect devname =
   match Macaddr.of_string (solo5_net_mac ()) with
-  | None -> err_unknown "mac issue"
-  | Some m -> 
-     let mac = m in
+  | None -> Lwt.fail_with "mirage-net-solo5: connect: mac issue"
+  | Some mac ->
      log "plugging into %s with mac %s" devname (Macaddr.to_string mac);
      let active = true in
      let t = {
@@ -80,7 +76,7 @@ let connect devname =
      in
      Hashtbl.add devices devname t;
      log "connect %s" devname;
-     ok t
+     Lwt.return t
 
 let disconnect t =
   log "disconnect %s" t.id;
