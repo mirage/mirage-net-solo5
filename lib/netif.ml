@@ -21,7 +21,6 @@ let (>>=) = Lwt.(>>=)
 let (>|=) = Lwt.(>|=)
 
 type +'a io = 'a Lwt.t
-type id = string
 
 type error = [
   | `Unknown of string
@@ -37,7 +36,7 @@ type stats = {
 }
 
 type t = {
-  id: id;
+  id: string;
   mutable active: bool;
   mutable mac: Macaddr.t;
   stats : stats;
