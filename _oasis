@@ -12,4 +12,4 @@ Library mirage_net_solo5
   Path:               lib
   Findlibname:        mirage-net-solo5
   Modules:            Netif
-  BuildDepends:       cstruct, ipaddr, mirage-profile, mirage-types, io-page, mirage-solo5
+  BuildDepends:       logs, cstruct, ipaddr, mirage-profile, mirage-types, io-page, mirage-solo5

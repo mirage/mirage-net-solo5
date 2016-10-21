@@ -18,7 +18,8 @@
 open Result
 open V1.Network
 
-let log fmt = Format.printf ("Netif: " ^^ fmt ^^ "\n%!")
+let src = Logs.Src.create "netif" ~doc:"Mirage Solo5 network module"
+module Log = (val Logs.src_log src : Logs.LOG)
 
 let (>>=) = Lwt.(>>=)
 let (>|=) = Lwt.(>|=)
@@ -38,28 +39,22 @@ external solo5_net_write: Cstruct.buffer -> int -> int = "stub_net_write"
 
 let devices = Hashtbl.create 1
 
-let err_permission_denied devname =
-  Printf.sprintf
-    "Permission denied while opening the %s tun device. \n\
-     Please re-run using sudo, and install the TuntapOSX \n\
-     package if you are on MacOS X." devname
-
 let connect devname =
   match Macaddr.of_string (solo5_net_mac ()) with
-  | None -> Lwt.fail_with "mirage-net-solo5: connect: mac issue"
+  | None -> Lwt.fail_with "Netif: Could not get MAC address"
   | Some mac ->
-     log "plugging into %s with mac %s" devname (Macaddr.to_string mac);
+     Log.info (fun f -> f "Plugging into %s with mac %s"
+                        devname (Macaddr.to_string mac));
      let active = true in
      let t = {
          id=devname; active; mac;
          stats= { rx_bytes=0L;rx_pkts=0l; tx_bytes=0L; tx_pkts=0l } }
      in
      Hashtbl.add devices devname t;
-     log "connect %s" devname;
      Lwt.return t
 
 let disconnect t =
-  log "disconnect %s" t.id;
+  Log.info (fun f -> f "Disconnect %s" t.id);
   t.active <- false;
   Lwt.return_unit
 
@@ -84,7 +79,8 @@ let rec read t page =
         Lwt.return r)
       (function
         | exn ->
-          log "[read] error: %s, continuing" (Printexc.to_string exn);
+          Log.err (fun f -> f "[read] error: %s, continuing"
+                            (Printexc.to_string exn));
           Lwt.return (Error `Continue))
   in
   process () >>= function
@@ -96,8 +92,8 @@ let safe_apply f x =
   Lwt.catch
     (fun () -> f x)
     (fun exn ->
-       log "[listen] error while handling %s, continuing. bt: %s"
-         (Printexc.to_string exn) (Printexc.get_backtrace ());
+       Log.err (fun f -> f "[listen] error while handling %s, continuing. bt: %s"
+                           (Printexc.to_string exn) (Printexc.get_backtrace ()));
        Lwt.return_unit)
 
 (* Loop and listen for packets permanently *)
@@ -128,9 +124,9 @@ let write t buffer =
       let len' = solo5_net_write buffer.buffer buffer.len in
       t.stats.tx_pkts <- Int32.succ t.stats.tx_pkts;
       t.stats.tx_bytes <- Int64.add t.stats.tx_bytes (Int64.of_int buffer.len);
-      if len' <> buffer.len then
-        let err = Printf.sprintf "netif %s: partial write (%d, expected %d)" t.id len' buffer.len in
-        Lwt.return (Error (`Unknown err))
+      if len' <> buffer.len then (
+        Log.err (fun f -> f "Partial write (%d, expected %d)" len' buffer.len);
+        Lwt.return (Error (`Unknown "Partial write")))
       else Lwt.return (Ok ()))
     (fun exn -> Lwt.return (Error (`Unknown (Printexc.to_string exn))))
 
