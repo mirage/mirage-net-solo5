@@ -17,19 +17,17 @@
 
 open Result
 open V1.Network
+open Lwt.Infix
 
 let src = Logs.Src.create "netif" ~doc:"Mirage Solo5 network module"
 module Log = (val Logs.src_log src : Logs.LOG)
-
-let (>>=) = Lwt.(>>=)
-let (>|=) = Lwt.(>|=)
 
 type +'a io = 'a Lwt.t
 
 type t = {
   id: string;
   mutable active: bool;
-  mutable mac: Macaddr.t;
+  mac: Macaddr.t;
   stats : stats;
 }
 
