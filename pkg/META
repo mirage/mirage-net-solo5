@@ -1,0 +1,9 @@
+version = "%%VERSION_NUM%%"
+description = "Solo5 network driver for Mirage"
+requires = "logs cstruct ipaddr mirage-profile mirage-types io-page mirage-solo5"
+archive(byte) = "mirage-net-solo5.cma"
+plugin(byte) = "mirage-net-solo5.cma"
+archive(native) = "mirage-net-solo5.cmxa"
+plugin(native) = "mirage-net-solo5.cmxs"
+exists_if = "mirage-net-solo5.cma"
+
