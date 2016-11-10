@@ -1,28 +1,4 @@
-# OASIS_START
-# DO NOT EDIT (digest: 8401f24d3b4e0530cf660c2cabc8adcd)
-# Ignore VCS directories, you can use the same kind of rule outside
-# OASIS_START/STOP if you want to exclude directories that contains
-# useless stuff for the build process
-true: annot, bin_annot
-<**/.svn>: -traverse
-<**/.svn>: not_hygienic
-".bzr": -traverse
-".bzr": not_hygienic
-".hg": -traverse
-".hg": not_hygienic
-".git": -traverse
-".git": not_hygienic
-"_darcs": -traverse
-"_darcs": not_hygienic
-# Library mirage_net_solo5
-"lib/mirage_net_solo5.cmxs": use_mirage_net_solo5
-<lib/*.ml{,i,y}>: pkg_cstruct
-<lib/*.ml{,i,y}>: pkg_io-page
-<lib/*.ml{,i,y}>: pkg_ipaddr
-<lib/*.ml{,i,y}>: pkg_logs
-<lib/*.ml{,i,y}>: pkg_mirage-profile
-<lib/*.ml{,i,y}>: pkg_mirage-solo5
-<lib/*.ml{,i,y}>: pkg_mirage-types
-# OASIS_STOP
-true: annot, bin_annot, debug, principal
+true: bin_annot, safe_string, principal
 true: warn(A-27-32-34-37), strict_sequence
+
+<lib/*>: package(cstruct io-page ipaddr logs mirage-solo5 mirage-types.lwt lwt)
