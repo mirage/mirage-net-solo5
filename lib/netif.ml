@@ -124,9 +124,9 @@ let write t buffer =
       t.stats.tx_bytes <- Int64.add t.stats.tx_bytes (Int64.of_int buffer.len);
       if len' <> buffer.len then (
         Log.err (fun f -> f "Partial write (%d, expected %d)" len' buffer.len);
-        Lwt.return (Error (`Unknown "Partial write")))
+        Lwt.return (Error (`Msg "Partial write")))
       else Lwt.return (Ok ()))
-    (fun exn -> Lwt.return (Error (`Unknown (Printexc.to_string exn))))
+    (fun exn -> Lwt.return (Error (`Msg (Printexc.to_string exn))))
 
 let writev t = function
   | []     -> Lwt.return (Ok ())
