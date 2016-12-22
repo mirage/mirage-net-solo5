@@ -1,5 +1,4 @@
 PKG cstruct lwt mirage-types io-page ipaddr mirage-profile mirage-solo5 logs
 
-S lib/
+S src/
 B _build/
-
