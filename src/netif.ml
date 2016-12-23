@@ -88,6 +88,9 @@ let rec read t page =
         in
         Lwt.return r)
       (function
+        | Lwt.Canceled ->
+          Log.info (fun f -> f "[read] user program requested cancellation of listen on %s" t.id);
+          Lwt.return (Error `Canceled)
         | exn ->
           Log.err (fun f -> f "[read] error: %s, continuing"
                             (Printexc.to_string exn));
@@ -95,6 +98,7 @@ let rec read t page =
   in
   process () >>= function
   | Error `Continue -> OS.Main.wait_for_work () >>= fun () -> read t page
+  | Error `Canceled -> Lwt.return (Error `Canceled)
   | Error `Disconnected -> Lwt.return (Error `Disconnected)
   | Ok buf -> Lwt.return (Ok buf)
 
@@ -117,10 +121,11 @@ let rec listen t fn =
     let process () =
       read t page >|= function
       | Ok buf              -> Lwt.async (fun () -> safe_apply fn buf) ; Ok ()
+      | Error `Canceled     -> Error `Disconnected
       | Error `Disconnected -> t.active <- false ; Error `Disconnected
     in
     process () >>= (function
-        | Ok () -> listen t fn
+        | Ok () -> (listen[@tailcall]) t fn
         | Error e -> Lwt.return (Error e))
   | false -> Lwt.return (Ok ())
 
