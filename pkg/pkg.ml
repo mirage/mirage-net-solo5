@@ -9,4 +9,4 @@ let () =
   in
   let opams = [ Pkg.opam_file "opam" ~lint_deps_excluding ] in
   Pkg.describe ~opams "mirage-net-solo5" @@ fun c ->
-  Ok [ Pkg.mllib "lib/mirage-net-solo5.mllib"; ]
+  Ok [ Pkg.mllib "src/mirage-net-solo5.mllib"; ]
