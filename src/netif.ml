@@ -89,7 +89,7 @@ let rec read t page =
         Lwt.return r)
       (function
         | Lwt.Canceled ->
-          Log.info (fun f -> f "[read] user program requested cancellation of listen on %s" t.id;
+          Log.info (fun f -> f "[read] user program requested cancellation of listen on %s" t.id);
           Lwt.return (Error `Canceled)
         | exn ->
           Log.err (fun f -> f "[read] error: %s, continuing"
