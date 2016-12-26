@@ -1,5 +1,4 @@
 true: bin_annot, safe_string, principal
 true: warn(A-27-32-34-37), strict_sequence
 
-<src/*>: package(cstruct io-page ipaddr logs mirage-solo5 mirage-types)
-<src/*>: package(mirage-types-lwt lwt mirage-runtime)
+<src/*>: package(cstruct io-page ipaddr logs mirage-solo5 lwt mirage-net-lwt)
