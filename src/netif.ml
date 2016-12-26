@@ -16,7 +16,7 @@
  *)
 
 open Result
-open V1.Network
+open Mirage_net
 open Lwt.Infix
 
 let src = Logs.Src.create "netif" ~doc:"Mirage Solo5 network module"
@@ -32,13 +32,13 @@ type t = {
 }
 
 type error = [
-  | V1.Network.error
+  | Mirage_net.error
   | `Partial of int * Cstruct.t
   | `Exn of exn
 ]
 
 let pp_error ppf = function
-  | #V1.Network.error as e -> Mirage_pp.pp_network_error ppf e
+  | #Mirage_net.error as e -> Mirage_net.pp_error ppf e
   | `Exn e                 -> Fmt.exn ppf e
   | `Partial (len, buf)    ->
     Fmt.pf ppf "Partial write (%d, expected %d)" len buf.Cstruct.len
