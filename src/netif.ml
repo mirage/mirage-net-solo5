@@ -18,6 +18,7 @@
 open Result
 open Mirage_net
 open Lwt.Infix
+open OS.Solo5
 
 let src = Logs.Src.create "netif" ~doc:"Mirage Solo5 network module"
 module Log = (val Logs.src_log src : Logs.LOG)
@@ -48,12 +49,6 @@ type solo5_net_info = {
   mac_address: string;
   mtu: int;
 }
-
-type solo5_result =
-  | SOLO5_R_OK
-  | SOLO5_R_AGAIN
-  | SOLO5_R_EINVAL
-  | SOLO5_R_EUNSPEC
 
 external solo5_net_info:
   unit -> solo5_net_info = "mirage_solo5_net_info"
