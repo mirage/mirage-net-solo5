@@ -137,9 +137,6 @@ let rec listen t fn =
       | Error e -> Lwt.return (Error e))
   | false -> Lwt.return (Ok ())
 
-let do_write b =
-  Lwt.return ()
-
 (* Transmit a packet from a Cstruct.t *)
 let write t buf =
   let open Cstruct in
