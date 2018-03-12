@@ -1,6 +1,7 @@
 (*
  * Copyright (c) 2010-2015 Anil Madhavapeddy <anil@recoil.org>
  * Copyright (C) 2015      Thomas Gazagnaire <thomas@gazagnaire.org>
+ * Copyright (c) 2018      Martin Lucina <martin@lucina.net>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,6 +19,7 @@
 open Result
 open Mirage_net
 open Lwt.Infix
+open OS.Solo5
 
 let src = Logs.Src.create "netif" ~doc:"Mirage Solo5 network module"
 module Log = (val Logs.src_log src : Logs.LOG)
@@ -28,34 +30,45 @@ type t = {
   id: string;
   mutable active: bool;
   mac: Macaddr.t;
-  stats : stats;
+  stats: stats;
 }
 
 type error = [
   | Mirage_net.error
-  | `Partial of int * Cstruct.t
+  | `Invalid_argument
+  | `Unspecified_error
   | `Exn of exn
 ]
 
 let pp_error ppf = function
   | #Mirage_net.error as e -> Mirage_net.pp_error ppf e
+  | `Invalid_argument      -> Fmt.string ppf "Invalid argument"
+  | `Unspecified_error     -> Fmt.string ppf "Unspecified error"
   | `Exn e                 -> Fmt.exn ppf e
-  | `Partial (len, buf)    ->
-    Fmt.pf ppf "Partial write (%d, expected %d)" len buf.Cstruct.len
 
-external solo5_net_mac: unit -> string = "stub_net_mac"
-external solo5_net_read: Cstruct.buffer -> int -> int = "stub_net_read"
-external solo5_net_write: Cstruct.buffer -> int -> int = "stub_net_write"
+type solo5_net_info = {
+  mac_address: string;
+  mtu: int;
+}
+
+external solo5_net_info:
+  unit -> solo5_net_info = "mirage_solo5_net_info"
+external solo5_net_read:
+  Cstruct.buffer -> int -> solo5_result * int = "mirage_solo5_net_read"
+external solo5_net_write:
+  Cstruct.buffer -> int -> solo5_result = "mirage_solo5_net_write"
 
 let devices = Hashtbl.create 1
 
 let connect devname =
-  match Macaddr.of_string (solo5_net_mac ()) with
+  let ni = solo5_net_info () in
+  match Macaddr.of_bytes ni.mac_address with
   | None -> Lwt.fail_with "Netif: Could not get MAC address"
   | Some mac ->
      Log.info (fun f -> f "Plugging into %s with mac %s"
                         devname (Macaddr.to_string mac));
      let active = true in
+     (* XXX: hook up ni.mtu *)
      let t = {
          id=devname; active; mac;
          stats= { rx_bytes=0L;rx_pkts=0l; tx_bytes=0L; tx_pkts=0l } }
@@ -73,34 +86,27 @@ type page_aligned_buffer = Io_page.t
 type buffer = Cstruct.t
 
 (* Input a frame, and block if nothing is available *)
-let rec read t page =
-  let buf = Io_page.to_cstruct page in
+let rec read t buf =
   let process () =
-    Lwt.catch (fun () ->
-        let r = match solo5_net_read buf.Cstruct.buffer buf.Cstruct.len with
-          | (-1) ->  Error `Continue                 (* EAGAIN or EWOULDBLOCK *)
-          | 0    -> Error `Disconnected                                (* EOF *)
-          | len ->
-            t.stats.rx_pkts <- Int32.succ t.stats.rx_pkts;
-            t.stats.rx_bytes <- Int64.add t.stats.rx_bytes (Int64.of_int len);
-            let buf = Cstruct.sub buf 0 len in
-            Ok buf
-        in
-        Lwt.return r)
-      (function
-        | Lwt.Canceled ->
-          Log.info (fun f -> f "[read] user program requested cancellation of listen on %s" t.id);
-          Lwt.return (Error `Canceled)
-        | exn ->
-          Log.err (fun f -> f "[read] error: %s, continuing"
-                            (Printexc.to_string exn));
-          Lwt.return (Error `Continue))
+    let r = match solo5_net_read buf.Cstruct.buffer buf.Cstruct.len with
+      | (SOLO5_R_OK, len)    ->
+        t.stats.rx_pkts <- Int32.succ t.stats.rx_pkts;
+        t.stats.rx_bytes <- Int64.add t.stats.rx_bytes (Int64.of_int len);
+        let buf = Cstruct.sub buf 0 len in
+        Ok buf
+      | (SOLO5_R_AGAIN, _)   -> Error `Continue
+      | (SOLO5_R_EINVAL, _)  -> Error `Invalid_argument
+      | (SOLO5_R_EUNSPEC, _) -> Error `Unspecified_error
+    in
+    Lwt.return r
   in
   process () >>= function
-  | Error `Continue -> OS.Main.wait_for_work () >>= fun () -> read t page
-  | Error `Canceled -> Lwt.return (Error `Canceled)
-  | Error `Disconnected -> Lwt.return (Error `Disconnected)
-  | Ok buf -> Lwt.return (Ok buf)
+  | Ok buf                   -> Lwt.return (Ok buf)
+  | Error `Continue          ->
+    OS.Main.wait_for_work () >>= fun () -> read t buf
+  | Error `Canceled          -> Lwt.return (Error `Canceled)
+  | Error `Invalid_argument  -> Lwt.return (Error `Invalid_argument)
+  | Error `Unspecified_error -> Lwt.return (Error `Unspecified_error)
 
 let safe_apply f x =
   Lwt.catch
@@ -117,37 +123,36 @@ let safe_apply f x =
 let rec listen t fn =
   match t.active with
   | true ->
-    let page = Io_page.get 1 in
+    let buf = Cstruct.create 1514 in (* XXX: hook up ni.mtu *)
     let process () =
-      read t page >|= function
-      | Ok buf              -> Lwt.async (fun () -> safe_apply fn buf) ; Ok ()
-      | Error `Canceled     -> Error `Disconnected
-      | Error `Disconnected -> t.active <- false ; Error `Disconnected
+      read t buf >|= function
+      | Ok buf                   ->
+        Lwt.async (fun () -> safe_apply fn buf) ; Ok ()
+      | Error `Canceled          -> Error `Disconnected
+      | Error `Invalid_argument  -> Error `Invalid_argument
+      | Error `Unspecified_error -> Error `Unspecified_error
     in
     process () >>= (function
-        | Ok () -> (listen[@tailcall]) t fn
-        | Error e -> Lwt.return (Error e))
+      | Ok () -> (listen[@tailcall]) t fn
+      | Error e -> Lwt.return (Error e))
   | false -> Lwt.return (Ok ())
 
-let do_write b =
-  Lwt.return ()
-
 (* Transmit a packet from a Cstruct.t *)
-let write t buffer =
+let write t buf =
   let open Cstruct in
-  Lwt.catch (fun () ->
-      let len' = solo5_net_write buffer.buffer buffer.len in
+  let r = match solo5_net_write buf.buffer buf.len with
+    | SOLO5_R_OK      ->
       t.stats.tx_pkts <- Int32.succ t.stats.tx_pkts;
-      t.stats.tx_bytes <- Int64.add t.stats.tx_bytes (Int64.of_int buffer.len);
-      if len' <> buffer.len then (
-        let err = `Partial (len', buffer) in
-        Log.err (fun f -> f "%a" pp_error err);
-        Lwt.return (Error err))
-      else Lwt.return (Ok ()))
-    (fun exn -> Lwt.return (Error (`Exn exn)))
+      t.stats.tx_bytes <- Int64.add t.stats.tx_bytes (Int64.of_int buf.len);
+      Ok ()
+    | SOLO5_R_AGAIN   -> assert false (* Not returned by solo5_net_write() *)
+    | SOLO5_R_EINVAL  -> Error `Invalid_argument
+    | SOLO5_R_EUNSPEC -> Error `Unspecified_error
+  in
+  Lwt.return r
 
 let writev t = function
-  | []     -> Lwt.return (Ok ())
+  | []       -> Lwt.return (Ok ())
   | [buffer] -> write t buffer
   | buffers  ->
     write t @@ Cstruct.concat buffers
