@@ -1,3 +1,8 @@
+## v0.3.0 (2018-06-17)
+
+* Adapt to Solo5 v0.3.0 API changes, refactor and clean up dead code (@mato,
+  #21)
+
 ## v0.2.0 (2017-01-17)
 
 * Port to topkg (@hannesm, #10)
