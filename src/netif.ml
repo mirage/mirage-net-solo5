@@ -53,9 +53,9 @@ type solo5_net_info = {
 external solo5_net_info:
   unit -> solo5_net_info = "mirage_solo5_net_info"
 external solo5_net_read:
-  Cstruct.buffer -> int -> solo5_result * int = "mirage_solo5_net_read"
+  Cstruct.buffer -> int -> int -> solo5_result * int = "mirage_solo5_net_read_2"
 external solo5_net_write:
-  Cstruct.buffer -> int -> solo5_result = "mirage_solo5_net_write"
+  Cstruct.buffer -> int -> int -> solo5_result = "mirage_solo5_net_write_2"
 
 let devices = Hashtbl.create 1
 
@@ -87,7 +87,8 @@ type buffer = Cstruct.t
 (* Input a frame, and block if nothing is available *)
 let rec read t buf =
   let process () =
-    let r = match solo5_net_read buf.Cstruct.buffer buf.Cstruct.len with
+    let r = match solo5_net_read
+        buf.Cstruct.buffer buf.Cstruct.off buf.Cstruct.len with
       | (SOLO5_R_OK, len)    ->
         t.stats.rx_pkts <- Int32.succ t.stats.rx_pkts;
         t.stats.rx_bytes <- Int64.add t.stats.rx_bytes (Int64.of_int len);
@@ -139,7 +140,7 @@ let rec listen t fn =
 (* Transmit a packet from a Cstruct.t *)
 let write t buf =
   let open Cstruct in
-  let r = match solo5_net_write buf.buffer buf.len with
+  let r = match solo5_net_write buf.buffer buf.off buf.len with
     | SOLO5_R_OK      ->
       t.stats.tx_pkts <- Int32.succ t.stats.tx_pkts;
       t.stats.tx_bytes <- Int64.add t.stats.tx_bytes (Int64.of_int buf.len);
