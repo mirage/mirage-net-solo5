@@ -1,3 +1,9 @@
+## v0.4.0 (2018-11-08)
+
+* Correctly use Cstruct buffer offset (@mato, #25)
+* Migrate to OPAM 2 (@mato, #24)
+* Remove open Result (@hannesm, #23)
+
 ## v0.3.0 (2018-06-17)
 
 * Adapt to Solo5 v0.3.0 API changes, refactor and clean up dead code (@mato,
