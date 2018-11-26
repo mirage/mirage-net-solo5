@@ -29,6 +29,7 @@ type t = {
   id: string;
   mutable active: bool;
   mac: Macaddr.t;
+  mtu: int;
   stats: stats;
 }
 
@@ -46,8 +47,8 @@ let pp_error ppf = function
   | `Exn e                 -> Fmt.exn ppf e
 
 type solo5_net_info = {
-  mac_address: string;
-  mtu: int;
+  solo5_mac: string;
+  solo5_mtu: int;
 }
 
 external solo5_net_info:
@@ -57,21 +58,17 @@ external solo5_net_read:
 external solo5_net_write:
   Cstruct.buffer -> int -> int -> solo5_result = "mirage_solo5_net_write_2"
 
-let devices = Hashtbl.create 1
-
 let connect devname =
   let ni = solo5_net_info () in
-  match Macaddr.of_bytes ni.mac_address with
+  match Macaddr.of_bytes ni.solo5_mac with
   | Error (`Msg m) -> Lwt.fail_with ("Netif: Could not get MAC address: " ^ m)
   | Ok mac ->
-     Log.info (fun f -> f "Plugging into %s with mac %a" devname Macaddr.pp mac);
-     let active = true in
-     (* XXX: hook up ni.mtu *)
+     Log.info (fun f -> f "Plugging into %s with mac %a mtu %d"
+                        devname Macaddr.pp mac ni.solo5_mtu);
      let t = {
-         id=devname; active; mac;
+         id=devname; active = true; mac; mtu = ni.solo5_mtu;
          stats= { rx_bytes=0L;rx_pkts=0l; tx_bytes=0L; tx_pkts=0l } }
      in
-     Hashtbl.add devices devname t;
      Lwt.return t
 
 let disconnect t =
@@ -80,7 +77,6 @@ let disconnect t =
   Lwt.return_unit
 
 type macaddr = Macaddr.t
-type page_aligned_buffer = Io_page.t
 type buffer = Cstruct.t
 
 (* Input a frame, and block if nothing is available *)
@@ -115,6 +111,9 @@ let safe_apply f x =
                            (Printexc.to_string exn) (Printexc.get_backtrace ()));
        Lwt.return_unit)
 
+let allocate_frame ?size t =
+  Cstruct.create (match size with None -> t.mtu | Some x -> min x t.mtu)
+
 (* Loop and listen for packets permanently *)
 (* this function has to be tail recursive, since it is called at the
    top level, otherwise memory of received packets and all reachable
@@ -122,7 +121,7 @@ let safe_apply f x =
 let rec listen t fn =
   match t.active with
   | true ->
-    let buf = Cstruct.create 1514 in (* XXX: hook up ni.mtu *)
+    let buf = allocate_frame t in
     let process () =
       read t buf >|= function
       | Ok buf                   ->
@@ -157,6 +156,8 @@ let writev t = function
     write t @@ Cstruct.concat buffers
 
 let mac t = t.mac
+
+let mtu t = t.mtu
 
 let get_stats_counters t = t.stats
 
