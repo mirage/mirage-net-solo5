@@ -1,3 +1,7 @@
+## v0.4.1 (2019-01-07)
+
+* Migrate to ipaddr 3.0 (@hannesm, #27)
+
 ## v0.4.0 (2018-11-08)
 
 * Correctly use Cstruct buffer offset (@mato, #25)

@@ -62,10 +62,9 @@ let devices = Hashtbl.create 1
 let connect devname =
   let ni = solo5_net_info () in
   match Macaddr.of_bytes ni.mac_address with
-  | None -> Lwt.fail_with "Netif: Could not get MAC address"
-  | Some mac ->
-     Log.info (fun f -> f "Plugging into %s with mac %s"
-                        devname (Macaddr.to_string mac));
+  | Error (`Msg m) -> Lwt.fail_with ("Netif: Could not get MAC address: " ^ m)
+  | Ok mac ->
+     Log.info (fun f -> f "Plugging into %s with mac %a" devname Macaddr.pp mac);
      let active = true in
      (* XXX: hook up ni.mtu *)
      let t = {

@@ -1,4 +1,4 @@
 true: bin_annot, safe_string, principal
 true: strict_sequence
 
-<src/*>: package(cstruct ipaddr logs mirage-solo5 lwt mirage-net-lwt fmt)
+<src/*>: package(cstruct macaddr logs mirage-solo5 lwt mirage-net-lwt fmt)
