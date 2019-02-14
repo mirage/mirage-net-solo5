@@ -25,6 +25,8 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 type +'a io = 'a Lwt.t
 
+let ethernet_header_size = 14
+
 type t = {
   id: string;
   mutable active: bool;
@@ -116,7 +118,7 @@ let safe_apply f x =
 let rec listen t fn =
   match t.active with
   | true ->
-    let buf = Cstruct.create (t.mtu + 14) in
+    let buf = Cstruct.create (t.mtu + ethernet_header_size) in
     let process () =
       read t buf >|= function
       | Ok buf                   ->
@@ -136,9 +138,9 @@ let write_pure t ?size fill =
   if size > t.mtu then
     Error `Exceeds_mtu
   else
-    let size = 14 + size in
+    let size = ethernet_header_size + size in
     let buf = Cstruct.create size in
-    let len = 14 + fill buf in
+    let len = ethernet_header_size + fill buf in
     if len > size then
       Error `Invalid_length
     else
