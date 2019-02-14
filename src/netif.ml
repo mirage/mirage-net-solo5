@@ -25,8 +25,6 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 type +'a io = 'a Lwt.t
 
-let ethernet_header_size = 14
-
 type t = {
   id: string;
   mutable active: bool;
@@ -115,10 +113,10 @@ let safe_apply f x =
 (* this function has to be tail recursive, since it is called at the
    top level, otherwise memory of received packets and all reachable
    data is never claimed.  take care when modifying, here be dragons! *)
-let rec listen t fn =
+let rec listen t ~header_size fn =
   match t.active with
   | true ->
-    let buf = Cstruct.create (t.mtu + ethernet_header_size) in
+    let buf = Cstruct.create (t.mtu + header_size) in
     let process () =
       read t buf >|= function
       | Ok buf                   ->
@@ -128,32 +126,27 @@ let rec listen t fn =
       | Error `Unspecified_error -> Error `Unspecified_error
     in
     process () >>= (function
-      | Ok () -> (listen[@tailcall]) t fn
+      | Ok () -> (listen[@tailcall]) t ~header_size fn
       | Error e -> Lwt.return (Error e))
   | false -> Lwt.return (Ok ())
 
 (* Transmit a packet from a Cstruct.t *)
-let write_pure t ?size fill =
-  let size = match size with None -> t.mtu | Some s -> s in
-  if size > t.mtu then
-    Error `Exceeds_mtu
+let write_pure t ~size fill =
+  let buf = Cstruct.create size in
+  let len = fill buf in
+  if len > size then
+    Error `Invalid_length
   else
-    let size = ethernet_header_size + size in
-    let buf = Cstruct.create size in
-    let len = ethernet_header_size + fill buf in
-    if len > size then
-      Error `Invalid_length
-    else
-      match solo5_net_write buf.Cstruct.buffer 0 len with
-      | SOLO5_R_OK      ->
-        t.stats.tx_pkts <- Int32.succ t.stats.tx_pkts;
-        t.stats.tx_bytes <- Int64.add t.stats.tx_bytes (Int64.of_int len);
-        Ok ()
-      | SOLO5_R_AGAIN   -> assert false (* Not returned by solo5_net_write() *)
-      | SOLO5_R_EINVAL  -> Error `Invalid_argument
-      | SOLO5_R_EUNSPEC -> Error `Unspecified_error
+    match solo5_net_write buf.Cstruct.buffer 0 len with
+    | SOLO5_R_OK      ->
+      t.stats.tx_pkts <- Int32.succ t.stats.tx_pkts;
+      t.stats.tx_bytes <- Int64.add t.stats.tx_bytes (Int64.of_int len);
+      Ok ()
+    | SOLO5_R_AGAIN   -> assert false (* Not returned by solo5_net_write() *)
+    | SOLO5_R_EINVAL  -> Error `Invalid_argument
+    | SOLO5_R_EUNSPEC -> Error `Unspecified_error
 
-let write t ?size fill = Lwt.return (write_pure t ?size fill)
+let write t ~size fill = Lwt.return (write_pure t ~size fill)
 
 let mac t = t.mac
 
