@@ -1,3 +1,7 @@
+## v0.4.2 (2019-02-24)
+
+* Adjust to mirage-net 2.0.0 interface changes (@hannesm, #28)
+
 ## v0.4.1 (2019-01-07)
 
 * Migrate to ipaddr 3.0 (@hannesm, #27)
