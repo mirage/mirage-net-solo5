@@ -29,25 +29,24 @@ type t = {
   id: string;
   mutable active: bool;
   mac: Macaddr.t;
+  mtu: int;
   stats: stats;
 }
 
 type error = [
-  | Mirage_net.error
+  | Mirage_net.Net.error
   | `Invalid_argument
   | `Unspecified_error
-  | `Exn of exn
 ]
 
 let pp_error ppf = function
-  | #Mirage_net.error as e -> Mirage_net.pp_error ppf e
+  | #Mirage_net.Net.error as e -> Mirage_net.Net.pp_error ppf e
   | `Invalid_argument      -> Fmt.string ppf "Invalid argument"
   | `Unspecified_error     -> Fmt.string ppf "Unspecified error"
-  | `Exn e                 -> Fmt.exn ppf e
 
 type solo5_net_info = {
-  mac_address: string;
-  mtu: int;
+  solo5_mac: string;
+  solo5_mtu: int;
 }
 
 external solo5_net_info:
@@ -57,21 +56,17 @@ external solo5_net_read:
 external solo5_net_write:
   Cstruct.buffer -> int -> int -> solo5_result = "mirage_solo5_net_write_2"
 
-let devices = Hashtbl.create 1
-
 let connect devname =
   let ni = solo5_net_info () in
-  match Macaddr.of_bytes ni.mac_address with
+  match Macaddr.of_bytes ni.solo5_mac with
   | Error (`Msg m) -> Lwt.fail_with ("Netif: Could not get MAC address: " ^ m)
   | Ok mac ->
-     Log.info (fun f -> f "Plugging into %s with mac %a" devname Macaddr.pp mac);
-     let active = true in
-     (* XXX: hook up ni.mtu *)
+     Log.info (fun f -> f "Plugging into %s with mac %a mtu %d"
+                        devname Macaddr.pp mac ni.solo5_mtu);
      let t = {
-         id=devname; active; mac;
+         id=devname; active = true; mac; mtu = ni.solo5_mtu;
          stats= { rx_bytes=0L;rx_pkts=0l; tx_bytes=0L; tx_pkts=0l } }
      in
-     Hashtbl.add devices devname t;
      Lwt.return t
 
 let disconnect t =
@@ -80,7 +75,6 @@ let disconnect t =
   Lwt.return_unit
 
 type macaddr = Macaddr.t
-type page_aligned_buffer = Io_page.t
 type buffer = Cstruct.t
 
 (* Input a frame, and block if nothing is available *)
@@ -119,10 +113,10 @@ let safe_apply f x =
 (* this function has to be tail recursive, since it is called at the
    top level, otherwise memory of received packets and all reachable
    data is never claimed.  take care when modifying, here be dragons! *)
-let rec listen t fn =
+let rec listen t ~header_size fn =
   match t.active with
   | true ->
-    let buf = Cstruct.create 1514 in (* XXX: hook up ni.mtu *)
+    let buf = Cstruct.create (t.mtu + header_size) in
     let process () =
       read t buf >|= function
       | Ok buf                   ->
@@ -132,31 +126,31 @@ let rec listen t fn =
       | Error `Unspecified_error -> Error `Unspecified_error
     in
     process () >>= (function
-      | Ok () -> (listen[@tailcall]) t fn
+      | Ok () -> (listen[@tailcall]) t ~header_size fn
       | Error e -> Lwt.return (Error e))
   | false -> Lwt.return (Ok ())
 
 (* Transmit a packet from a Cstruct.t *)
-let write t buf =
-  let open Cstruct in
-  let r = match solo5_net_write buf.buffer buf.off buf.len with
+let write_pure t ~size fill =
+  let buf = Cstruct.create size in
+  let len = fill buf in
+  if len > size then
+    Error `Invalid_length
+  else
+    match solo5_net_write buf.Cstruct.buffer 0 len with
     | SOLO5_R_OK      ->
       t.stats.tx_pkts <- Int32.succ t.stats.tx_pkts;
-      t.stats.tx_bytes <- Int64.add t.stats.tx_bytes (Int64.of_int buf.len);
+      t.stats.tx_bytes <- Int64.add t.stats.tx_bytes (Int64.of_int len);
       Ok ()
     | SOLO5_R_AGAIN   -> assert false (* Not returned by solo5_net_write() *)
     | SOLO5_R_EINVAL  -> Error `Invalid_argument
     | SOLO5_R_EUNSPEC -> Error `Unspecified_error
-  in
-  Lwt.return r
 
-let writev t = function
-  | []       -> Lwt.return (Ok ())
-  | [buffer] -> write t buffer
-  | buffers  ->
-    write t @@ Cstruct.concat buffers
+let write t ~size fill = Lwt.return (write_pure t ~size fill)
 
 let mac t = t.mac
+
+let mtu t = t.mtu
 
 let get_stats_counters t = t.stats
 
