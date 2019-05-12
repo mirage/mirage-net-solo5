@@ -29,6 +29,7 @@ type t = {
   mac: Macaddr.t;
   mtu: int;
   stats: Mirage_net.stats;
+  metrics: (string -> Metrics.field list, Mirage_net.stats -> Metrics.data) Metrics.src
 }
 
 type error = [
@@ -57,6 +58,19 @@ external solo5_net_write:
   int64 -> Cstruct.buffer -> int -> int -> solo5_result =
       "mirage_solo5_net_write_3"
 
+let net_metrics () =
+  let open Metrics in
+  let doc = "Network statistics" in
+  let data stat =
+    Data.v
+      [ uint64 "received bytes" stat.Mirage_net.rx_bytes
+      ; uint32 "received packets" stat.rx_pkts
+      ; uint64 "transmitted bytes" stat.tx_bytes
+      ; uint32 "transmitted packets" stat.tx_pkts ]
+  in
+  let tag = Tags.string "ifname" in
+  Src.v ~doc ~tags:Tags.[ tag ] ~data "net-solo5"
+
 let connect devname =
   match solo5_net_acquire devname with
     | (SOLO5_R_OK, handle, ni) -> (
@@ -66,8 +80,9 @@ let connect devname =
          Log.info (fun f -> f "Plugging into %s with mac %a mtu %d"
                       devname Macaddr.pp mac ni.solo5_mtu);
          let stats = Mirage_net.Stats.create () in
+         let metrics = net_metrics () in
          let t = {
-           id=devname; handle; active = true; mac; mtu = ni.solo5_mtu; stats
+           id=devname; handle; active = true; mac; mtu = ni.solo5_mtu; stats ; metrics
          } in
          Lwt.return t
        )
@@ -89,6 +104,7 @@ let rec read t buf =
         t.handle buf.Cstruct.buffer buf.Cstruct.off buf.Cstruct.len with
       | (SOLO5_R_OK, len)    ->
         Mirage_net.Stats.rx t.stats (Int64.of_int len);
+        Metrics.add t.metrics (fun x -> x t.id) (fun d -> d t.stats);
         let buf = Cstruct.sub buf 0 len in
         Ok buf
       | (SOLO5_R_AGAIN, _)   -> Error `Continue
@@ -146,6 +162,7 @@ let write_pure t ~size fill =
     match solo5_net_write t.handle buf.Cstruct.buffer 0 len with
     | SOLO5_R_OK      ->
       Mirage_net.Stats.tx t.stats (Int64.of_int len);
+      Metrics.add t.metrics (fun x -> x t.id) (fun d -> d t.stats);
       Ok ()
     | SOLO5_R_AGAIN   -> assert false (* Not returned by solo5_net_write() *)
     | SOLO5_R_EINVAL  -> Error `Invalid_argument
