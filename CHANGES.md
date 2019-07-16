@@ -1,3 +1,8 @@
+## v0.4.3 (2019-07-16)
+
+* Adjust to macaddr version 4.0.0 API (@yomimono, #33)
+* Port to Dune (@pascutto, #29)
+
 ## v0.4.2 (2019-02-24)
 
 * Adjust to mirage-net 2.0.0 interface changes (@hannesm, #28)
