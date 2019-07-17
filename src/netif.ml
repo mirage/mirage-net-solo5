@@ -58,7 +58,7 @@ external solo5_net_write:
 
 let connect devname =
   let ni = solo5_net_info () in
-  match Macaddr.of_bytes ni.solo5_mac with
+  match Macaddr.of_octets ni.solo5_mac with
   | Error (`Msg m) -> Lwt.fail_with ("Netif: Could not get MAC address: " ^ m)
   | Ok mac ->
      Log.info (fun f -> f "Plugging into %s with mac %a mtu %d"
