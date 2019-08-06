@@ -107,7 +107,7 @@ let rec read t buf =
   process () >>= function
   | Ok buf                   -> Lwt.return (Ok buf)
   | Error `Continue          ->
-    OS.Main.wait_for_work () >>= fun () -> read t buf
+    OS.Main.wait_for_work_on_handle t.handle >>= fun () -> read t buf
   | Error `Canceled          -> Lwt.return (Error `Canceled)
   | Error `Invalid_argument  -> Lwt.return (Error `Invalid_argument)
   | Error `Unspecified_error -> Lwt.return (Error `Unspecified_error)
