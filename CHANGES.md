@@ -1,3 +1,8 @@
+## v0.6.0 (2019-09-25)
+
+* Synchronise version number with other Mirage/Solo5 component packages.
+* Update to Solo5 0.6.0+ APIs, multiple devices support (@mato, #32)
+
 ## v0.4.3 (2019-07-16)
 
 * Adjust to macaddr version 4.0.0 API (@yomimono, #33)
