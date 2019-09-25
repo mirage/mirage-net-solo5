@@ -27,6 +27,7 @@ type +'a io = 'a Lwt.t
 
 type t = {
   id: string;
+  handle: int64;
   mutable active: bool;
   mac: Macaddr.t;
   mtu: int;
@@ -49,25 +50,35 @@ type solo5_net_info = {
   solo5_mtu: int;
 }
 
-external solo5_net_info:
-  unit -> solo5_net_info = "mirage_solo5_net_info"
+external solo5_net_acquire:
+  string -> solo5_result * int64 * solo5_net_info =
+      "mirage_solo5_net_acquire"
 external solo5_net_read:
-  Cstruct.buffer -> int -> int -> solo5_result * int = "mirage_solo5_net_read_2"
+  int64 -> Cstruct.buffer -> int -> int -> solo5_result * int =
+      "mirage_solo5_net_read_3"
 external solo5_net_write:
-  Cstruct.buffer -> int -> int -> solo5_result = "mirage_solo5_net_write_2"
+  int64 -> Cstruct.buffer -> int -> int -> solo5_result =
+      "mirage_solo5_net_write_3"
 
 let connect devname =
-  let ni = solo5_net_info () in
-  match Macaddr.of_octets ni.solo5_mac with
-  | Error (`Msg m) -> Lwt.fail_with ("Netif: Could not get MAC address: " ^ m)
-  | Ok mac ->
-     Log.info (fun f -> f "Plugging into %s with mac %a mtu %d"
-                        devname Macaddr.pp mac ni.solo5_mtu);
-     let t = {
-         id=devname; active = true; mac; mtu = ni.solo5_mtu;
-         stats= { rx_bytes=0L;rx_pkts=0l; tx_bytes=0L; tx_pkts=0l } }
-     in
-     Lwt.return t
+  match solo5_net_acquire devname with
+    | (SOLO5_R_OK, handle, ni) -> (
+      match Macaddr.of_octets ni.solo5_mac with
+      | Error (`Msg m) -> Lwt.fail_with ("Netif: Could not get MAC address: " ^ m)
+      | Ok mac ->
+         Log.info (fun f -> f "Plugging into %s with mac %a mtu %d"
+                            devname Macaddr.pp mac ni.solo5_mtu);
+         let t = {
+             id=devname; handle; active = true; mac; mtu = ni.solo5_mtu;
+             stats= { rx_bytes=0L;rx_pkts=0l; tx_bytes=0L; tx_pkts=0l } }
+         in
+         Lwt.return t
+       )
+    | (SOLO5_R_AGAIN, _, _)   -> assert false
+    | (SOLO5_R_EINVAL, _, _)  ->
+      Lwt.fail_with (Fmt.strf "Netif: connect(%s): Invalid argument" devname)
+    | (SOLO5_R_EUNSPEC, _, _) ->
+      Lwt.fail_with (Fmt.strf "Netif: connect(%s): Unspecified error" devname)
 
 let disconnect t =
   Log.info (fun f -> f "Disconnect %s" t.id);
@@ -81,7 +92,7 @@ type buffer = Cstruct.t
 let rec read t buf =
   let process () =
     let r = match solo5_net_read
-        buf.Cstruct.buffer buf.Cstruct.off buf.Cstruct.len with
+        t.handle buf.Cstruct.buffer buf.Cstruct.off buf.Cstruct.len with
       | (SOLO5_R_OK, len)    ->
         t.stats.rx_pkts <- Int32.succ t.stats.rx_pkts;
         t.stats.rx_bytes <- Int64.add t.stats.rx_bytes (Int64.of_int len);
@@ -96,7 +107,7 @@ let rec read t buf =
   process () >>= function
   | Ok buf                   -> Lwt.return (Ok buf)
   | Error `Continue          ->
-    OS.Main.wait_for_work () >>= fun () -> read t buf
+    OS.Main.wait_for_work_on_handle t.handle >>= fun () -> read t buf
   | Error `Canceled          -> Lwt.return (Error `Canceled)
   | Error `Invalid_argument  -> Lwt.return (Error `Invalid_argument)
   | Error `Unspecified_error -> Lwt.return (Error `Unspecified_error)
@@ -137,7 +148,7 @@ let write_pure t ~size fill =
   if len > size then
     Error `Invalid_length
   else
-    match solo5_net_write buf.Cstruct.buffer 0 len with
+    match solo5_net_write t.handle buf.Cstruct.buffer 0 len with
     | SOLO5_R_OK      ->
       t.stats.tx_pkts <- Int32.succ t.stats.tx_pkts;
       t.stats.tx_bytes <- Int64.add t.stats.tx_bytes (Int64.of_int len);
