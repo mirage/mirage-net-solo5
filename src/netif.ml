@@ -23,8 +23,6 @@ open OS.Solo5
 let src = Logs.Src.create "netif" ~doc:"Mirage Solo5 network module"
 module Log = (val Logs.src_log src : Logs.LOG)
 
-type +'a io = 'a Lwt.t
-
 type t = {
   id: string;
   handle: int64;
@@ -84,9 +82,6 @@ let disconnect t =
   Log.info (fun f -> f "Disconnect %s" t.id);
   t.active <- false;
   Lwt.return_unit
-
-type macaddr = Macaddr.t
-type buffer = Cstruct.t
 
 (* Input a frame, and block if nothing is available *)
 let rec read t buf =
