@@ -16,7 +16,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-open Mirage_net
 open Lwt.Infix
 open OS.Solo5
 
@@ -29,7 +28,7 @@ type t = {
   mutable active: bool;
   mac: Macaddr.t;
   mtu: int;
-  stats: stats;
+  stats: Mirage_net.stats;
 }
 
 type error = [
@@ -68,7 +67,7 @@ let connect devname =
                             devname Macaddr.pp mac ni.solo5_mtu);
          let t = {
              id=devname; handle; active = true; mac; mtu = ni.solo5_mtu;
-             stats= { rx_bytes=0L;rx_pkts=0l; tx_bytes=0L; tx_pkts=0l } }
+             stats= { rx_bytes=0L; rx_pkts=0l; tx_bytes=0L; tx_pkts=0l } }
          in
          Lwt.return t
        )
