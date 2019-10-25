@@ -64,11 +64,11 @@ let connect devname =
       | Error (`Msg m) -> Lwt.fail_with ("Netif: Could not get MAC address: " ^ m)
       | Ok mac ->
          Log.info (fun f -> f "Plugging into %s with mac %a mtu %d"
-                            devname Macaddr.pp mac ni.solo5_mtu);
+                      devname Macaddr.pp mac ni.solo5_mtu);
+         let stats = Mirage_net.Stats.create () in
          let t = {
-             id=devname; handle; active = true; mac; mtu = ni.solo5_mtu;
-             stats= { rx_bytes=0L; rx_pkts=0l; tx_bytes=0L; tx_pkts=0l } }
-         in
+           id=devname; handle; active = true; mac; mtu = ni.solo5_mtu; stats
+         } in
          Lwt.return t
        )
     | (SOLO5_R_AGAIN, _, _)   -> assert false
@@ -88,8 +88,7 @@ let rec read t buf =
     let r = match solo5_net_read
         t.handle buf.Cstruct.buffer buf.Cstruct.off buf.Cstruct.len with
       | (SOLO5_R_OK, len)    ->
-        t.stats.rx_pkts <- Int32.succ t.stats.rx_pkts;
-        t.stats.rx_bytes <- Int64.add t.stats.rx_bytes (Int64.of_int len);
+        Mirage_net.Stats.rx t.stats (Int64.of_int len);
         let buf = Cstruct.sub buf 0 len in
         Ok buf
       | (SOLO5_R_AGAIN, _)   -> Error `Continue
@@ -144,8 +143,7 @@ let write_pure t ~size fill =
   else
     match solo5_net_write t.handle buf.Cstruct.buffer 0 len with
     | SOLO5_R_OK      ->
-      t.stats.tx_pkts <- Int32.succ t.stats.tx_pkts;
-      t.stats.tx_bytes <- Int64.add t.stats.tx_bytes (Int64.of_int len);
+      Mirage_net.Stats.tx t.stats (Int64.of_int len);
       Ok ()
     | SOLO5_R_AGAIN   -> assert false (* Not returned by solo5_net_write() *)
     | SOLO5_R_EINVAL  -> Error `Invalid_argument
@@ -159,8 +157,4 @@ let mtu t = t.mtu
 
 let get_stats_counters t = t.stats
 
-let reset_stats_counters t =
-  t.stats.rx_bytes <- 0L;
-  t.stats.rx_pkts  <- 0l;
-  t.stats.tx_bytes <- 0L;
-  t.stats.tx_pkts  <- 0l
+let reset_stats_counters t = Mirage_net.Stats.reset t.stats
