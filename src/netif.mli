@@ -15,5 +15,5 @@
  *)
 
 (** Solo5 interface for Ethernet I/O. *)
-include Mirage_net_lwt.S
+include Mirage_net.S
 val connect : string -> t Lwt.t
