@@ -1,3 +1,9 @@
+## v0.6.1 (2019-11-01)
+
+* Adapt to mirage-net 3.0.0 changes (@hannesm, #35)
+* Raise OCaml lower bound to 4.06.0 (@hannesm, #35)
+* cleanup: use Mirage_net.Stats helper functions (@hannesm, #35)
+
 ## v0.6.0 (2019-09-25)
 
 * Synchronise version number with other Mirage/Solo5 component packages.
