@@ -1,3 +1,9 @@
+## v0.6.2 (2020-09-04)
+
+* Netif.listen does not catch Out_of_memory anymore (@hannesm, #36)
+* Each network interface is now a metrics source reporting statistics
+  (see https://github.com/mirage/metrics for further information, @hannesm, #34)
+
 ## v0.6.1 (2019-11-01)
 
 * Adapt to mirage-net 3.0.0 changes (@hannesm, #35)
