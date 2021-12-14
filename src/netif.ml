@@ -88,9 +88,9 @@ let connect devname =
        )
     | (SOLO5_R_AGAIN, _, _)   -> assert false
     | (SOLO5_R_EINVAL, _, _)  ->
-      Lwt.fail_with (Fmt.strf "Netif: connect(%s): Invalid argument" devname)
+      Lwt.fail_with (Fmt.str "Netif: connect(%s): Invalid argument" devname)
     | (SOLO5_R_EUNSPEC, _, _) ->
-      Lwt.fail_with (Fmt.strf "Netif: connect(%s): Unspecified error" devname)
+      Lwt.fail_with (Fmt.str "Netif: connect(%s): Unspecified error" devname)
 
 let disconnect t =
   Log.info (fun f -> f "Disconnect %s" t.id);
