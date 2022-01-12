@@ -5,3 +5,9 @@
  (foreign_stubs
   (language c)
   (names solo5_net_stubs)))
+
+(rule
+ (target solo5_net_stubs.c)
+ (deps solo5_net_stubs.freestanding.c solo5_net_stubs.default.c)
+ (action
+  (copy solo5_net_stubs.%{context_name}.c %{target})))
