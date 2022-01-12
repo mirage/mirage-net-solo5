@@ -3,3 +3,5 @@ _build
 *.native
 *.install
 *.merlin
+*.locked
+duniverse
