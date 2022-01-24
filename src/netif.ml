@@ -17,7 +17,7 @@
  *)
 
 open Lwt.Infix
-open OS.Solo5
+open Solo5_os.Solo5
 
 let src = Logs.Src.create "netif" ~doc:"Mirage Solo5 network module"
 module Log = (val Logs.src_log src : Logs.LOG)
@@ -116,7 +116,7 @@ let rec read t buf =
   process () >>= function
   | Ok buf                   -> Lwt.return (Ok buf)
   | Error `Continue          ->
-    OS.Main.wait_for_work_on_handle t.handle >>= fun () -> read t buf
+    Solo5_os.Main.wait_for_work_on_handle t.handle >>= fun () -> read t buf
   | Error `Canceled          -> Lwt.return (Error `Canceled)
   | Error `Invalid_argument  -> Lwt.return (Error `Invalid_argument)
   | Error `Unspecified_error -> Lwt.return (Error `Unspecified_error)

@@ -1,7 +1,7 @@
 (library
  (name netif)
  (public_name mirage-net-solo5)
- (libraries cstruct macaddr logs mirage-solo5 lwt mirage-net fmt metrics)
+ (libraries mirage-solo5 cstruct macaddr logs lwt mirage-net fmt metrics)
  (foreign_stubs
   (language c)
   (names solo5_net_stubs)))
