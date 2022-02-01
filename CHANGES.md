@@ -1,3 +1,9 @@
+## v0.7.0 (2022-02-01)
+
+* Upgrade and fix the package with newer version of dependencies (@hannesm, #37)
+* Be able to compile & install `mirage-net-solo5` without the expected `dune`'s context (@TheLortex, @dinosaure, #38)
+* Use `Solo5_os` instead of `OS` (@dinosaure, #39)
+
 ## v0.6.2 (2020-09-04)
 
 * Netif.listen does not catch Out_of_memory anymore (@hannesm, #36)
