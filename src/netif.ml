@@ -121,16 +121,6 @@ let rec read t buf =
   | Error `Invalid_argument  -> Lwt.return (Error `Invalid_argument)
   | Error `Unspecified_error -> Lwt.return (Error `Unspecified_error)
 
-let safe_apply f x =
-  Lwt.catch
-    (fun () -> f x)
-    (function
-      | Out_of_memory -> Lwt.fail Out_of_memory
-      | exn ->
-        Log.err (fun f -> f "[listen] error while handling %s, continuing. bt: %s"
-                    (Printexc.to_string exn) (Printexc.get_backtrace ()));
-        Lwt.return_unit)
-
 (* Loop and listen for packets permanently *)
 (* this function has to be tail recursive, since it is called at the
    top level, otherwise memory of received packets and all reachable
@@ -141,8 +131,7 @@ let rec listen t ~header_size fn =
     let buf = Cstruct.create (t.mtu + header_size) in
     let process () =
       read t buf >|= function
-      | Ok buf                   ->
-        Lwt.async (fun () -> safe_apply fn buf) ; Ok ()
+      | Ok buf                   -> Lwt.async (fun () -> fn buf) ; Ok ()
       | Error `Canceled          -> Error `Disconnected
       | Error `Invalid_argument  -> Error `Invalid_argument
       | Error `Unspecified_error -> Error `Unspecified_error
