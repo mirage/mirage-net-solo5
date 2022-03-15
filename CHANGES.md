@@ -1,3 +1,7 @@
+## v0.7.1 (2022-03-14)
+
+* Do not `Lwt.catch` on the listen callback (@hannesm, @dinosaure, #41)
+
 ## v0.7.0 (2022-02-01)
 
 * Upgrade and fix the package with newer version of dependencies (@hannesm, #37)
