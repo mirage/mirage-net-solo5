@@ -8,6 +8,6 @@
 
 (rule
  (target solo5_net_stubs.c)
- (deps solo5_net_stubs.freestanding.c solo5_net_stubs.default.c)
+ (deps solo5_net_stubs.solo5.c solo5_net_stubs.default.c)
  (action
   (copy solo5_net_stubs.%{context_name}.c %{target})))
