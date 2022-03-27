@@ -1,3 +1,8 @@
+## v0.8.0 (2022-03-27)
+
+* Rename the freestanding toolchain to solo5 (@dinosaure, #42)
+* Use ocamlformat (@samoht, #45)
+
 ## v0.7.1 (2022-03-14)
 
 * Do not `Lwt.catch` on the listen callback (@hannesm, @dinosaure, #41)
