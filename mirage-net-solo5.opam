@@ -33,3 +33,4 @@ depends: [
 synopsis: "Solo5 implementation of MirageOS network interface"
 description:
   "This library implements the MirageOS network interface for Solo5 targets."
+x-maintenance-intent: [ "(latest)" ]
