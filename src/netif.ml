@@ -32,6 +32,7 @@ type t = {
   stats : Mirage_net.stats;
   metrics :
     (string -> Metrics.field list, Mirage_net.stats -> Metrics.data) Metrics.src;
+  backoff : Lwt_mutex.t;
 }
 
 type error = [ Mirage_net.Net.error | `Invalid_argument | `Unspecified_error ]
@@ -89,6 +90,7 @@ let connect devname =
               mtu = ni.solo5_mtu;
               stats;
               metrics;
+              backoff = Lwt_mutex.create ();
             }
           in
           Lwt.return t)
@@ -134,22 +136,29 @@ let rec read t buf =
 (* this function has to be tail recursive, since it is called at the
    top level, otherwise memory of received packets and all reachable
    data is never claimed.  take care when modifying, here be dragons! *)
-let rec listen t ~header_size fn =
+let listen t ~header_size fn =
   match t.active with
   | true -> (
-      let buf = Cstruct.create (t.mtu + header_size) in
-      let process () =
-        read t buf >|= function
-        | Ok buf ->
+      let rec listen t ~header_size fn =
+        let buf = Cstruct.create (t.mtu + header_size) in
+        let process () =
+          read t buf >|= function
+          | Ok buf ->
             Lwt.async (fun () -> fn buf);
             Ok ()
-        | Error `Canceled -> Error `Disconnected
-        | Error `Invalid_argument -> Error `Invalid_argument
-        | Error `Unspecified_error -> Error `Unspecified_error
+          | Error `Canceled -> Error `Disconnected
+          | Error `Invalid_argument -> Error `Invalid_argument
+          | Error `Unspecified_error -> Error `Unspecified_error
+        in
+        if Lwt_mutex.is_empty t.backoff then
+          process () >>= function
+          | Ok () -> (listen [@tailcall]) t ~header_size fn
+          | Error e -> Lwt.return (Error e)
+        else
+          (Log.warn (fun m -> m "backing off listener!");
+           Lwt.return (Error `Unspecified_error))
       in
-      process () >>= function
-      | Ok () -> (listen [@tailcall]) t ~header_size fn
-      | Error e -> Lwt.return (Error e))
+      Lwt_mutex.with_lock t.backoff (fun () -> listen t ~header_size fn))
   | false -> Lwt.return (Ok ())
 
 (* Transmit a packet from a Cstruct.t *)
