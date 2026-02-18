@@ -23,6 +23,17 @@ let src = Logs.Src.create "netif" ~doc:"Mirage Solo5 network module"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
+let max_pending =
+  let open Cmdliner in
+  let doc =
+    Arg.info
+      ~doc:
+        "Per-interface maximum pending packets, after which we start dropping \
+         packets"
+      [ "max-pending" ]
+  in
+  Mirage_runtime.register_arg Arg.(value & opt int 10_000 doc)
+
 type t = {
   id : string;
   handle : int64;
@@ -30,6 +41,7 @@ type t = {
   mac : Macaddr.t;
   mtu : int;
   stats : Mirage_net.stats;
+  mutable pending : int;
   metrics :
     (string -> Metrics.field list, Mirage_net.stats -> Metrics.data) Metrics.src;
 }
@@ -87,6 +99,7 @@ let connect devname =
               active = true;
               mac;
               mtu = ni.solo5_mtu;
+              pending = 0;
               stats;
               metrics;
             }
@@ -141,7 +154,21 @@ let rec listen t ~header_size fn =
       let process () =
         read t buf >|= function
         | Ok buf ->
-            Lwt.async (fun () -> fn buf);
+            if t.pending > max_pending () then
+              (* Last resort packet drop: a smaller limit should be used in
+                 higher level of the network stack, where we can print more
+                 details about what the packet was
+              *)
+              Log.debug (fun f ->
+                  f "Packet dropped (%d bytes)" (Cstruct.length buf))
+            else
+              Lwt.async (fun () ->
+                  let promise = fn buf in
+                  if Lwt.is_sleeping promise then (
+                    t.pending <- t.pending + 1;
+                    Lwt.on_termination promise (fun () ->
+                        t.pending <- t.pending - 1));
+                  promise);
             Ok ()
         | Error `Canceled -> Error `Disconnected
         | Error `Invalid_argument -> Error `Invalid_argument
