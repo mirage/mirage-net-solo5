@@ -30,8 +30,6 @@ type t = {
   mac : Macaddr.t;
   mtu : int;
   stats : Mirage_net.stats;
-  metrics :
-    (string -> Metrics.field list, Mirage_net.stats -> Metrics.data) Metrics.src;
 }
 
 type error = [ Mirage_net.Net.error | `Invalid_argument | `Unspecified_error ]
@@ -53,7 +51,7 @@ external solo5_net_read :
 external solo5_net_write : int64 -> Cstruct.buffer -> int -> int -> solo5_result
   = "mirage_solo5_net_write_3"
 
-let net_metrics () =
+let metrics =
   let open Metrics in
   let doc = "Network statistics" in
   let data stat =
@@ -79,7 +77,6 @@ let connect devname =
               f "Plugging into %s with mac %a mtu %d" devname Macaddr.pp mac
                 ni.solo5_mtu);
           let stats = Mirage_net.Stats.create () in
-          let metrics = net_metrics () in
           let t =
             {
               id = devname;
@@ -88,7 +85,6 @@ let connect devname =
               mac;
               mtu = ni.solo5_mtu;
               stats;
-              metrics;
             }
           in
           Lwt.return t)
@@ -113,7 +109,7 @@ let rec read t buf =
       with
       | SOLO5_R_OK, len ->
           Mirage_net.Stats.rx t.stats (Int64.of_int len);
-          Metrics.add t.metrics (fun x -> x t.id) (fun d -> d t.stats);
+          Metrics.add metrics (fun x -> x t.id) (fun d -> d t.stats);
           let buf = Cstruct.sub buf 0 len in
           Ok buf
       | SOLO5_R_AGAIN, _ -> Error `Continue
@@ -161,7 +157,7 @@ let write_pure t ~size fill =
     match solo5_net_write t.handle buf.Cstruct.buffer 0 len with
     | SOLO5_R_OK ->
         Mirage_net.Stats.tx t.stats (Int64.of_int len);
-        Metrics.add t.metrics (fun x -> x t.id) (fun d -> d t.stats);
+        Metrics.add metrics (fun x -> x t.id) (fun d -> d t.stats);
         Ok ()
     | SOLO5_R_AGAIN -> assert false (* Not returned by solo5_net_write() *)
     | SOLO5_R_EINVAL -> Error `Invalid_argument
