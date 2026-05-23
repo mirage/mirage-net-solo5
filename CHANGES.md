@@ -1,3 +1,9 @@
+## v0.8.1 (2026-05-23)
+
+* Deduplicate metrics sources. There's no need to create a separate
+  Metrics.Src.t for each network interface, since each measurement will include
+  the name of the network interface as tag ("ifname") (@hannesm #50)
+
 ## v0.8.0 (2022-03-27)
 
 * Rename the freestanding toolchain to solo5 (@dinosaure, #42)
